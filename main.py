@@ -3,7 +3,7 @@ from random import randrange
 
 
 class Simulation:
-    creatureList = {'herbivore': [], 'predators': []}
+    creatureList = {'herbivore': [], 'predator': [], 'tree': [], 'rock': [], 'grass': []}
     moveCounter = 0
     actions = []  # ???
 
@@ -17,10 +17,11 @@ class Simulation:
         for cls in entityClasses:
             for i in range(self.row):
                 coordinate = None
-                while coordinate is None or coordinate not in self.map.map:
+                while coordinate is None or coordinate in self.map.locations:
                     x, y = randrange(0, self.row, 1), randrange(0, self.col, 1)
                     coordinate = Coordinate(x, y)
-                entity = cls(str(i), coordinate)
+                entity = cls(f'{cls}: {i}'), coordinate)
+                print(entity, coordinate)
                 self.creatureList[cls.__name__.lower()].append(entity.name)
                 self.map.addCreature(entity, coordinate)
 
@@ -44,13 +45,13 @@ class Coordinate:
 
 class Map:
     def __init__(self):
-        self.map = dict()
+        self.locations = dict()
 
     def addCreature(self, creature, coordinate):
-        self.map[coordinate] = creature
+        self.locations[coordinate] = creature
 
     def delCreature(self, coordinate):
-        del self.map[coordinate]
+        del self.locations[coordinate]
         # + del creature from creatureList
 
 
@@ -64,8 +65,8 @@ if __name__ == '__main__':
     for x in range(row):
         for y in range(col):
             coordinate = Coordinate(x, y)
-            if coordinate in game.map.map:
-                print(game.map.map[coordinate].emj, end=" ")
+            if coordinate in game.map.locations:
+                print(game.map.locations[coordinate].emj, end=" ")
         print()
 
     # game.makeSimulation()
