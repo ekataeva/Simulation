@@ -1,16 +1,19 @@
 from abc import *
 
 
-
 class Entity(metaclass=ABCMeta):
-    # Корневой абстрактный класс для всех существ и объектов
-    # навигация по классу мап
-    defaultHP = 1
+    """ Корневой абстрактный класс для всех существ и объектов
+     навигация по классу мап"""
 
-    def __init__(self, name, coordinate , HP=defaultHP):
+    def __init__(self, name="ent", coordinate=(0, 0), HP=1):
         self.name = name
         self.coordinate = coordinate
         self.HP = HP
+
+    emj = " "
+
+    def __str__(self):
+        return f"{self.emj:3}"
 
 
 class Rock(Entity):
@@ -20,20 +23,17 @@ class Rock(Entity):
 
 class Tree(Entity):
     # статичные объекты - нельзя взаимодействовать
-    emj = '\U0001F333'
+    emj = '\U0001F334'
 
 
 class Grass(Entity):
-    emj = '\U0001F331'
+    emj = '\U0001F96C'
     # ресурс для травоядных
 
 
 class Creature(Entity, metaclass=ABCMeta):
-    defaultSpeed = 3    # скорость (сколько клеток может пройти за 1 ход)
-    defaultHP = 3    # hitpoints - "количество жизней"
-
-    def __init__(self, name, coordinate,HP=defaultHP):
-        super().__init__(name, coordinate, HP)
+    defaultSpeed = 3  # скорость (сколько клеток может пройти за 1 ход)
+    defaultHP = 3  # hitpoints - "количество жизней"
 
     # Имеет абстрактный метод makeMove() - сделать ход.
     # Наследники будут реализовывать этот метод каждый по-своему.
@@ -44,19 +44,11 @@ class Creature(Entity, metaclass=ABCMeta):
     #     newCoordinate = self.findWay(coordinate, destination)
     #     return newCoordinate
 
-    def findWay(self, coordinate, speed):
-        # if isEat:
-        #     someHerbivore.HP -= self.attack
-        # if someHerbivore.HP < 1:
-        #     del someHerbivore
-        pass
-        # return newCoordinate, isEat
-        # realize: find destination or make closer to it
-
 
 class Herbivore(Creature):
     emj = '\U0001F993'  # zebra
     speed = 4
+
     # может потратить свой ход на движение в сторону травы, либо на её поглощение.
 
     def makeMove(self):
@@ -77,4 +69,8 @@ class Predator(Creature):
         #     self.coordinate = newCoordinate
         pass
 
-
+# print(Rock())
+# print(Tree())
+# print(Grass())
+# print(Herbivore())
+# print(Predator())
