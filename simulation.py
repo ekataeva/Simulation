@@ -67,7 +67,7 @@ class Simulation:
                 x = randrange(0, self._rows, 1)
                 y = randrange(0, self._cols, 1)
                 coordinate = (x, y)
-            entity = ent_cls(f'{ent_cls}: {i}', coordinate)
+            entity = ent_cls(coordinate, f'{ent_cls}: {i}', )
             self._entity_list[ent_cls.__name__.lower()].append(entity)
             self.map.add_entity(coordinate, entity)
 
@@ -83,12 +83,36 @@ class Simulation:
         print()
 
     def next_turns(self):
+        # шаги всех существ симуляции за один раунд
         for creatures in (self._entity_list['herbivore'], self._entity_list['predator']):
             for creature in creatures:
-                print(f"{creature} ищет путь")
+                print(f"{creature.name, creature} ищет путь")
                 path = self._find_way(creature)
                 print(f"{creature} нашел путь")
-                self._move(creature, path)
+                move_status = creature.make_move(path)
+                del self.map.cells[path[0]]
+                if move_status is not None:
+                    print(move_status)
+                if move_status == "predator attacked":
+                    # хищник атаковал травоядное: количество HP травоядного уменьшается на силу атаки хищника
+                    # Если значение HP жертвы опускается до 0, травоядное исчезает изменение координаты хищника:
+                    # последняя или предпоследняя координата пути (исчезает ли жертва)
+                    self.map.cells[path[-1]].HP -= creature.attack
+                    if Herbivore.HP <= 0:
+                        self._entity_list['herbivore'].remove(self.map.cells[path[-1]])
+                        self.map.cells[path[-1]] = creature
+                        creature.coordinate = path[-1]
+                    else:
+                        self.map.cells[path[-2]] = creature
+                        creature.coordinate = path[-2]
+                elif move_status == "herbivore attacked":
+                    # травоядное съело траву:
+                    #   удаление травы из карты (объект по координате)
+                    #   координата травоядного = координата конца пути
+                    self._entity_list['grass'].remove(self.map.cells[path[-1]])
+                    self.map.cells[path[-1]] = creature
+                else:
+                    self.map.cells[creature.coordinate] = creature
                 print(f"{creature} сделал ход")
                 self.render()
                 time.sleep(1)
@@ -146,6 +170,3 @@ class Simulation:
         path = path[::-1]
         print(f"path: {path}")
         return path
-
-    def _move(self, creature, path):
-        pass
