@@ -47,12 +47,16 @@ class Simulation:
                     self.make_entities(Grass)
                 self.turn_actions()
                 self.__clean_not_live_ent()     # из self._entity_list
-                if self.is_not_pause():
-                    continue
+                # if self.is_not_pause():
+                #     continue
+        print(f"Симуляция завершилась за {self.move_counter} раундов. \n"
+              f"На поле осталось: ")
+        for key, value in self._entity_list.items():
+            print(key + ": " + str(len(value)))
 
     def make_entities(self, ent_cls):
         coordinate = ()
-        for i in range(3): #self._rows - подумать над количеством!
+        for i in range(self._rows): #self._rows - подумать над количеством!
             while len(coordinate) < 2 or not self.map.is_free(coordinate):
                 x = randrange(0, self._rows, 1)
                 y = randrange(0, self._cols, 1)

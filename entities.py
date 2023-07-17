@@ -41,7 +41,7 @@ class Creature(Entity, metaclass=ABCMeta):
 
     def make_move(self, path):
         # если длина пути меньше скорости - поедание травы
-        if len(path) <= self.speed:
+        if len(path) <= self.speed + 1:
             self.coordinate = path[-1]
             return "attack"
         # иначе - движение в сторону травы
