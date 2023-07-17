@@ -9,6 +9,7 @@ class Entity(metaclass=ABCMeta):
         self.name = name
         self.coordinate = coordinate
         self.emj = emj
+        self.is_live = True
 
     def __str__(self):
         return f"{self.emj:3}"
@@ -36,52 +37,50 @@ class Grass(Entity):
 
 
 class Creature(Entity, metaclass=ABCMeta):
-    @abstractmethod
+    speed = 3  # скорость (сколько клеток может пройти за 1 ход)
+
     def make_move(self, path):
-        pass
+        # если длина пути меньше скорости - поедание травы
+        if len(path) <= self.speed:
+            self.coordinate = path[-1]
+            return "attack"
+        # иначе - движение в сторону травы
+        else:
+            self.coordinate = path[self.speed]
+            return None
 
 
 class Herbivore(Creature):
     def __init__(self, coordinate, name="Herbivore"):
+        self.HP = 4  # hit-points - "количество жизней"
         emj = '\U0001F993'  # zebra
         super().__init__(coordinate, name, emj)
 
-    speed = 2  # скорость (сколько клеток может пройти за 1 ход)
-    HP = 4  # hit-points - "количество жизней"
-
-    def make_move(self, path):
-        # может потратить свой ход на движение в сторону травы, либо на её поглощение
-        # если длина пути больше 2 (начало и конец) - движение в сторону травы
-        if len(path) > 2:
-            if self.speed + 1 > len(path) - 1:
-                self.coordinate = path[-1]
-            else:
-                self.coordinate = path[self.speed + 1]
-            return None
-        # иначе - поедание травы
-        else:
-            self.coordinate = path[-1]
-            return "herbivore attacked"
+    # def make_move(self, path):  # может потратить свой ход на движение в сторону травы, либо на её поглощение
+    #     # если длина пути меньше скорости - поедание травы
+    #     if len(path) <= self.speed + 1:
+    #         self.coordinate = path[-1]
+    #         return "attack"
+    #     # иначе - движение в сторону травы
+    #     else:
+    #         self.coordinate = path[self.speed + 1]
+    #         return None
 
 
 class Predator(Creature):
     def __init__(self, coordinate, name="Predator"):
         emj = '\U0001F981'  # lion
         super().__init__(coordinate, name, emj)
+        self.attack = 2  # сила атаки
+        self.speed = 3  # скорость (сколько клеток может пройти за 1 ход)
+        self.HP = 2  # hit-points - "количество жизней"
 
-    attack = 2  # сила атаки
-    speed = 4  # скорость (сколько клеток может пройти за 1 ход)
-    HP = 2  # hit-points - "количество жизней"
-
-    def make_move(self, path):
-        # если длина пути больше 2 (начало и конец) - Переместиться (чтобы приблизиться к жертве - травоядному)
-        if len(path) > 2:
-            if self.speed + 1 > len(path) - 1:
-                self.coordinate = path[-1]
-            else:
-                self.coordinate = path[self.speed + 1]
-            # + изменение координаты в карте симуляции -> в методе при возвращении None
-            return None
-        # Иначе - Атаковать травоядное
-        else:
-            return "predator attacked"
+    # def make_move(self, path):
+    #     # если длина пути больше 2 (начало и конец) - Переместиться (чтобы приблизиться к жертве - травоядному)
+    #     if len(path) > 2:
+    #         super().make_move(path)
+    #         # + изменение координаты в карте симуляции -> в методе при возвращении None
+    #     # Иначе - Атаковать травоядное
+    #     else:
+    #         self.coordinate = path[-1]
+    #         return "predator attacked"

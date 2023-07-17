@@ -16,8 +16,6 @@ class Map:
     создать существо - приватный - проверяет, занята ли клетка и добавляет существо в пустую клетку.
     проверка занята ли клетка - существует ли такой массив в ключах карты
     удалить существо
-
-
     """
 
     def __init__(self, rows, cols):
@@ -27,10 +25,10 @@ class Map:
         self.graph = {(x, y): set() for x in range(rows) for y in range(cols)}
         self.make_graph()
 
-    def is_in_borders(self, coord):
-        if coord[0] < self.__rows and coord[1] < self.__cols:
-            return True
-        return False
+    # def is_in_borders(self, coord):
+    #     if coord[0] < self.__rows and coord[1] < self.__cols:
+    #         return True
+    #     return False
 
     def add_entity(self, coord, entity):
         if self.is_free(coord):
@@ -41,9 +39,9 @@ class Map:
             return False
         return True
 
-    def del_entity(self, coord):
-        if not self.is_free(coord):
-            del self.cells[coord]
+    # def del_entity(self, coord):
+    #     if not self.is_free(coord):
+    #         del self.cells[coord]
 
     def make_graph(self):
         for i in range(self.__rows):
