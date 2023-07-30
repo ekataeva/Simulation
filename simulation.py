@@ -1,18 +1,25 @@
-from collections import deque
+from typing import Any, Dict
+
 from entities import Tree, Rock, Grass, Herbivore, Predator
+from actions import bfs, is_not_pause
 from random import randrange
 from map import Map
-import time
+import math
+from time import sleep
 
 
 class Simulation:
-    """Главный класс приложения, включает в себя:
+    """Главный класс приложения
+
+    Атрибуты:
+    -------
+
     - Карту
     - Счётчик ходов
     - Рендерер поля
     - Actions - список действий, исполняемых перед стартом симуляции или на каждом ходу
 
-    Симуляция содержит 2 массива действий:
+    Симуляция содержит 2 основных массива действий:
     - initActions - действия, совершаемые перед стартом симуляции. Пример - расставить объекты и существ на карте
     - turnActions - действия, совершаемые каждый ход. Примеры - передвижение существ, добавить травы
      или травоядных, если их осталось слишком мало
@@ -25,108 +32,122 @@ class Simulation:
 
 """
 
-    def __init__(self, rows, cols):
+    def __init__(self, rows, cols, population):
         self.map = Map(rows, cols)
         self._rows = rows
         self._cols = cols
         self.move_counter = 0
-        self.is_pause = False
-        self.init_actions()
+        self.init_actions(population)
 
-    _entity_list = {'herbivore': [], 'predator': [], 'tree': [], 'rock': [], 'grass': []}
+    _entity_list = {'Predator': [], 'Herbivore': [], 'Grass': [], 'Tree': [], 'Rock': []}
 
-    def init_actions(self):
+    def init_actions(self, population):
         print("Симуляция начинается....")
-        for ent_cls in [Predator, Tree, Rock, Herbivore, Grass]:
-            self.make_entities(ent_cls)
-        self.render()
-        while self._entity_list['herbivore']:  # => len(self._entity_list['herbivore']) > 0
-            if not self.is_pause:
-                print(f"Раунд {self.move_counter}")
-                if len(self._entity_list['herbivore']) > len(self._entity_list['grass']):
-                    self.make_entities(Grass)
-                self.turn_actions()
-                self.__clean_not_live_ent()     # из self._entity_list
-                # if self.is_not_pause():
-                #     continue
+        init_population_list = {'Predator': 0, 'Herbivore': 0, 'Grass': 0, 'Tree': 0, 'Rock': 0}
+        for ent_cls, value in population.items():
+            ent_quantity = math.ceil(self._rows * self._cols * value / 100)
+            self.make_entities(ent_cls, ent_quantity)
+            init_population_list[ent_cls.__name__] = ent_quantity
+        self.console_render()
+
+        while self._entity_list['Herbivore'] and self._entity_list['Predator']:
+            print(f"Раунд {self.move_counter}")
+            none_path_counter = self.turn_actions()
+            if none_path_counter == len(self._entity_list['Predator']):
+                break
+            # удаление экземпляров классов Grass & Herbivore из self._entity_list (is_actual = False)
+            self.__clean_not_actual_ent()
+            if is_not_pause():
+                continue
+
         print(f"Симуляция завершилась за {self.move_counter} раундов. \n"
               f"На поле осталось: ")
         for key, value in self._entity_list.items():
-            print(key + ": " + str(len(value)))
+            print(key + ": из " + str(init_population_list[key]) + " -> " + str(len(value)))
 
-    def make_entities(self, ent_cls):
+    def make_entities(self, ent_cls, ent_quantity):
         coordinate = ()
-        for i in range(self._rows): #self._rows - подумать над количеством!
-            while len(coordinate) < 2 or not self.map.is_free(coordinate):
+        for i in range(ent_quantity):
+            while len(coordinate) < 2 or not self.map.is_empty(coordinate):
                 x = randrange(0, self._rows, 1)
                 y = randrange(0, self._cols, 1)
                 coordinate = (x, y)
-            entity = ent_cls(coordinate, f'{ent_cls}: {i}', )
-            self._entity_list[ent_cls.__name__.lower()].append(entity)
-            self.map.add_entity(coordinate, entity)
+            entity = ent_cls(coordinate, f'{ent_cls.__name__} {i}', )
+            self._entity_list[ent_cls.__name__].append(entity)
+            self.map.place_entity(coordinate, entity)
 
-    def render(self):
+    def console_render(self):
         for x in range(self._rows):
             for y in range(self._cols):
                 coord = (x, y)
-                if not self.map.is_free(coord) and self.map.cells[coord].is_live:
-                    print(self.map.cells[coord], end='')
+                entity = self.map.get_entity(coord)
+                if not self.map.is_empty(coord) and entity.is_actual:
+                    print(entity, end='')
                 else:
-                    print('{:3}'.format('\u2B1B'), end='')
-            print(x)
+                    emj = '\u2B1B'
+                    print(f"{emj.center(3)}", end='')
+            print("  " + str(x))
         print()
-
-    def is_not_pause(self):
-        is_not_pause = int(input("Продолжить - 1, пауза - 0: "))
-        if not is_not_pause:
-            self.is_pause = True
-            if int(input("Нажмите 0 для выхода или 1 для продолжения: ")):
-                return True
-            else:
-                # Вызвать исключение SystemExit для завершения программы
-                raise SystemExit("Программа прервана")
+        sleep(1)
 
     def turn_actions(self):
+        self.__check_gras()
+        none_path_counter = 0
+
         # шаги всех существ симуляции за один раунд
-        if len(self._entity_list['herbivore']) > len(self._entity_list['grass']):
-            self.make_entities(Grass)
-        for creatures in (self._entity_list['herbivore'], self._entity_list['predator']):
-            for creature in creatures:
-                if creature.is_live:
-                    print(f"{creature.name} {creature} ищет путь")
-                    path = self._find_way(creature)
-                    if path is not None:
-                        print(f"{creature} нашел путь")
-                        move_status = creature.make_move(path)
-                        if path[0] in self.map.cells:
-                            del self.map.cells[path[0]]
-                        if move_status is not None:
-                            print(move_status)
-                        if move_status == "attack":
-                            # хищник атаковал травоядное: количество HP травоядного уменьшается на силу атаки хищника
-                            if hasattr(self.map.cells[path[-1]], 'HP'):
-                                self.map.cells[path[-1]].HP -= creature.attack
-                                if self.map.cells[path[-1]].HP <= 0:
-                                    # мягкое удаление травоядного
-                                    self.map.cells[path[-1]].is_live = False
-                                    self.map.cells[path[-1]] = creature
-                                else:
-                                    self.map.cells[path[-2]] = creature
-                                    creature.coordinate = path[-2]
-                            # травоядное съело траву:
-                            else:
-                                #   мягкое удаление травы (объект по координате)
-                                #   координата травоядного = координата конца пути
-                                self.map.cells[path[-1]].is_live = False
-                                self.map.cells[path[-1]] = creature
-                        else:
-                            self.map.cells[creature.coordinate] = creature
-                        print(f"{creature} сделал ход")
+        for creature in (self._entity_list['Herbivore'] + self._entity_list['Predator']):
+            if creature.is_actual:
+                # Найти путь существа к ресурсу
+                path = self._find_way(creature)
+
+                # Если путь отсутствует -> нет ресурса или тупик
+                if path is None:
+                    print(f'Для {creature} с координатами {creature.coordinate} нет достижимого ресурса')
+                    creature.HP -= 1
+                    if isinstance(creature, Predator):
+                        none_path_counter += 1
+
+                else:
+                    # Ход существа
+                    move_status = creature.make_move(path)
+                    # Удалить исходную позицию существа
+                    if self.map.get_entity(path[0]):
+                        self.map.del_entity(path[0])
+                    # Обработать ход существа в карте
+                    if move_status == "attack":
+                        self.__attack_actions(creature, path)
                     else:
-                        print(f'Для {creature} нет ресурса')
-                    self.render()
-                    # time.sleep(2)
+                        self.map.place_entity(creature.coordinate, creature)
+                    print(f"{creature} сходил на {creature.coordinate}")
+
+                if creature.HP <= 0:
+                    creature.is_actual = False
+                self.console_render()
+
         self.move_counter += 1
+        return none_path_counter
+
+    def __check_gras(self):
+        if len(self._entity_list['Herbivore']) > len(self._entity_list['Grass']):
+            self.make_entities(Grass, len(self._entity_list['Herbivore']))
+
+    def __attack_actions(self, creature, path):
+        # хищник атаковал травоядное: количество HP травоядного уменьшается на силу атаки хищника
+        if hasattr(self.map.get_entity(path[-1]), 'HP'):
+            self.map.get_entity(path[-1]).HP -= creature.attack
+            if self.map.get_entity(path[-1]).HP <= 0:
+                # 'мягкое' удаление травоядного
+                self.map.get_entity(path[-1]).is_actual = False
+                self.map.place_entity(path[-1], creature)
+            else:
+                self.map.place_entity(path[-2], creature)
+                creature.coordinate = path[-2]
+        # травоядное съело траву:
+        else:
+            #   мягкое удаление травы (объект по координате)
+            #   координата травоядного = координата конца пути
+            self.map.get_entity(path[-1]).is_actual = False
+            self.map.place_entity(path[-1], creature)
 
     def _find_way(self, creature):
         start_cell = creature.coordinate
@@ -134,45 +155,13 @@ class Simulation:
             target_class = Grass
         else:
             target_class = Herbivore
-        print(f'target_class: {target_class}')
-        path = self.__bfs(start_cell, target_class)
-        print(f"Creature: {creature}, path: {path}")
+        print(f"{creature.name} {creature} ищет {target_class.__name__}")
+        path = bfs(self.map, start_cell, target_class)
+        print(f"Path: {path}")
         return path
 
-    def __bfs(self, start_cell, target_class):
-        parents = {cell: None for cell in self.map.graph}
-        checked = set()
-        queue = deque([start_cell])
-        target_cell = None
-
-        while queue:
-            cur_cell = queue.popleft()
-            checked.add(cur_cell)
-            for neigh in self.map.graph[cur_cell]:
-                if neigh not in checked \
-                        and (neigh not in self.map.cells or isinstance(self.map.cells[neigh], target_class)):
-                    if parents[neigh] is None:
-                        parents[neigh] = cur_cell
-                        queue.append(neigh)
-                    if neigh in self.map.cells:
-                        if isinstance(self.map.cells[neigh], target_class) and self.map.cells[neigh].is_live:
-                            target_cell = neigh
-                            queue.clear()
-                            break
-
-        if target_cell is not None:
-            path = [target_cell]
-            parents[start_cell] = None
-            parent = parents[target_cell]
-            while parent is not None:
-                path.append(parent)
-                parent = parents[parent]
-            path = path[::-1]
-            return path
-        else:
-            return None
-
-    def __clean_not_live_ent(self):
+    def __clean_not_actual_ent(self):
         # очищение списка существ после мягкого удаления в цикле turn_actions
-        self._entity_list['herbivore'] = [obj for obj in self._entity_list['herbivore'] if obj.is_live]
-        self._entity_list['grass'] = [obj for obj in self._entity_list['grass'] if obj.is_live]
+        self._entity_list['Predator'] = [obj for obj in self._entity_list['Predator'] if obj.is_actual]
+        self._entity_list['Herbivore'] = [obj for obj in self._entity_list['Herbivore'] if obj.is_actual]
+        self._entity_list['Grass'] = [obj for obj in self._entity_list['Grass'] if obj.is_actual]
