@@ -18,7 +18,7 @@
 ## Для успешного запуска приложения:
 1. Откройте терминал
 2. Перейдите в папку `main`
-3. Запустите программу python `main.py`
+3. Запустите программу `python main.py`
 
 <img width="273" alt="image" src="https://github.com/ekataeva/Sumulation/assets/110416537/9a7dd093-6cfc-4806-bc04-e05485f54a18">
 
