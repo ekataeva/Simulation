@@ -2,6 +2,7 @@ from collections import deque
 
 
 def bfs(cur_map, start_cell, target_class):
+    # алгоритм поиска цели, соответствующей искомому классу, и пути в ширину
     parents = {cell: None for cell in cur_map.graph}
     checked = set()
     queue = deque([start_cell])
@@ -38,6 +39,7 @@ def bfs(cur_map, start_cell, target_class):
 
 
 def is_not_pause():
+    # приостановить бесконечный цикл симуляции и рендеринга
     is_not_pause = int(input("Продолжить - 1, пауза - 0: "))
     if not is_not_pause:
         if int(input("Нажмите 0 для выхода или 1 для продолжения: ")):
